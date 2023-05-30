@@ -1,3 +1,4 @@
+import fs from 'fs'
 import Fastify, { FastifyInstance, RouteShorthandOptions } from 'fastify'
 import { Server, IncomingMessage, ServerResponse } from 'http'
 import swagger from '@fastify/swagger'
@@ -13,11 +14,14 @@ import {
     getTrendingDebatesHandler,
     newArgumentHandler,
 } from './handlers'
+import { PrismaClient } from '@prisma/client'
 
 async function main() {
     const server: FastifyInstance = Fastify({
         logger: true
     })
+
+    const prisma = new PrismaClient()
 
     await server.register(swagger, {
         swagger: {
@@ -108,7 +112,7 @@ async function main() {
                 }
             ]
         }
-    }, newUserHandler())
+    }, newUserHandler(prisma))
 
     server.get('/users/:id', {
         schema: {
@@ -158,7 +162,7 @@ async function main() {
                 }
             ]
         }
-    }, getUserHandler())
+    }, getUserHandler(prisma))
 
     server.post('/users/:id', {
         schema: {
@@ -208,7 +212,7 @@ async function main() {
                 }
             ]
         }
-    }, updateUserHandler())
+    }, updateUserHandler(prisma))
 
     server.get('/users/search', {
         schema: {
@@ -258,7 +262,7 @@ async function main() {
                 }
             ]
         }
-    }, searchUserHandler())
+    }, searchUserHandler(prisma))
 
     server.get('/debates/:id', {
         schema: {
@@ -308,7 +312,7 @@ async function main() {
                 }
             ]
         }
-    }, getDebateHandler())
+    }, getDebateHandler(prisma))
 
     server.post('/debates', {
         schema: {
@@ -358,7 +362,7 @@ async function main() {
                 }
             ]
         }
-    }, newDebateHandler())
+    }, newDebateHandler(prisma))
 
     server.post('/debates/:id/', {
         schema: {
@@ -408,7 +412,7 @@ async function main() {
                 }
             ]
         }
-    }, updateDebateHandler())
+    }, updateDebateHandler(prisma))
 
     server.get('/debates/search', {
         schema: {
@@ -458,7 +462,7 @@ async function main() {
                 }
             ]
         }
-    }, searchDebateHandler())
+    }, searchDebateHandler(prisma))
 
     server.get('/debates/trending', {
         schema: {
@@ -508,7 +512,7 @@ async function main() {
                 }
             ]
         }
-    }, getTrendingDebatesHandler())
+    }, getTrendingDebatesHandler(prisma))
 
     server.post('/debates/:id/arguments', {
         schema: {
@@ -558,9 +562,9 @@ async function main() {
                 }
             ]
         }
-    }, newArgumentHandler())
+    }, newArgumentHandler(prisma))
 
-    require('fs').writeFileSync('./docs/swagger.yml', server.swagger({ yaml: true }))
+    fs.writeFileSync('./docs/swagger.yml', server.swagger({ yaml: true }))
 
     const start = async () => {
         try {

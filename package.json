@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "ChatGPT plugin enabling a debate game where users compete to persuade the LLM",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -18,10 +19,12 @@
   "homepage": "https://github.com/boskeyacht/debate-game#readme",
   "dependencies": {
     "@fastify/swagger": "^8.5.1",
+    "@prisma/client": "^4.15.0",
     "fastify": "^4.17.0",
     "typescript": "^5.0.4"
   },
   "devDependencies": {
-    "@types/node": "^20.2.5"
+    "@types/node": "^20.2.5",
+    "prisma": "^4.15.0"
   }
 }
