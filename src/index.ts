@@ -2,6 +2,9 @@ import fs from 'fs'
 import Fastify, { FastifyInstance, RouteShorthandOptions } from 'fastify'
 import { Server, IncomingMessage, ServerResponse } from 'http'
 import swagger from '@fastify/swagger'
+import { PrismaClient } from '@prisma/client'
+import Mixpanel from 'mixpanel';
+import dotenv from 'dotenv'
 import {
     newUserHandler,
     getUserHandler,
@@ -13,53 +16,75 @@ import {
     searchDebateHandler,
     getTrendingDebatesHandler,
     newArgumentHandler,
-} from './handlers'
-import { PrismaClient } from '@prisma/client'
+    mixpanelLogger
+} from './handlers.js'
 
+dotenv.config()
+
+
+// TODO: handle empty mixpanel token case in middleware
 async function main() {
     const server: FastifyInstance = Fastify({
         logger: true
     })
 
     const prisma = new PrismaClient()
+    var mixpanel = Mixpanel.init(process.env.MIXPANEL_TOKEN ?? '');
 
     await server.register(swagger, {
-        swagger: {
+        openapi: {
             info: {
-                title: 'Debate Game API',
-                description: 'API for the Debate Game',
+                title: 'Test swagger',
+                description: 'testing the fastify swagger api',
                 version: '0.1.0'
             },
-            externalDocs: {
-                url: 'https://swagger.io',
-                description: 'Find more info here'
-            },
-            host: 'localhost',
-            schemes: ['http'],
-            consumes: ['application/json'],
-            produces: ['application/json'],
-            tags: [
-                { name: 'users', description: 'Users related end-points' },
-                { name: 'debates', description: 'Debates related end-points' }
-            ],
-            definitions: {
-                User: {
-                    type: 'object',
-                    required: ['id', 'email'],
-                    properties: {
-                        id: { type: 'string', format: 'uuid' },
-                        firstName: { type: 'string' },
-                        lastName: { type: 'string' },
-                        email: { type: 'string', format: 'email' }
+            servers: [{
+                url: 'http://localhost'
+            }],
+            components: {
+                securitySchemes: {
+                    apiKey: {
+                        type: 'apiKey',
+                        name: 'apiKey',
+                        in: 'header'
                     }
                 }
-            },
-            securityDefinitions: {
-                apiKey: {
-                    type: 'apiKey',
-                    name: 'apiKey',
-                    in: 'header'
-                }
+            }
+        },
+        hideUntagged: true,
+    })
+
+    server.addHook('onRequest', await mixpanelLogger(mixpanel))
+
+    server.addSchema({
+        $id: 'user',
+        type: 'object',
+        properties: {
+            id: {
+                type: 'string',
+                description: 'user id'
+            }
+        }
+    })
+
+    server.addSchema({
+        $id: 'debate',
+        type: 'object',
+        properties: {
+            id: {
+                type: 'string',
+                description: 'user id'
+            }
+        }
+    })
+
+    server.addSchema({
+        $id: 'argument',
+        type: 'object',
+        properties: {
+            id: {
+                type: 'string',
+                description: 'user id'
             }
         }
     })
@@ -67,27 +92,12 @@ async function main() {
     server.post('/users', {
         schema: {
             description: 'post some data',
-            tags: ['user', 'code'],
+            tags: ['users'],
             summary: 'qwerty',
-            params: {
-                type: 'object',
-                properties: {
-                    id: {
-                        type: 'string',
-                        description: 'user id'
-                    }
-                }
-            },
             body: {
                 type: 'object',
                 properties: {
-                    hello: { type: 'string' },
-                    obj: {
-                        type: 'object',
-                        properties: {
-                            some: { type: 'string' }
-                        }
-                    }
+                    username: { type: 'string' },
                 }
             },
             response: {
@@ -95,14 +105,14 @@ async function main() {
                     description: 'Successful response',
                     type: 'object',
                     properties: {
-                        hello: { type: 'string' }
+                        username: { type: 'string' }
                     }
                 },
                 default: {
                     description: 'Default response',
                     type: 'object',
                     properties: {
-                        foo: { type: 'string' }
+                        message: { type: 'string' }
                     }
                 }
             },
@@ -114,34 +124,22 @@ async function main() {
         }
     }, newUserHandler(prisma))
 
-    server.get('/users/:id', {
+    server.get('/users/:username', {
         schema: {
             description: 'post some data',
-            tags: ['user', 'code'],
+            tags: ['users'],
             summary: 'qwerty',
             params: {
                 type: 'object',
                 properties: {
-                    id: {
+                    username: {
                         type: 'string',
-                        description: 'user id'
-                    }
-                }
-            },
-            body: {
-                type: 'object',
-                properties: {
-                    hello: { type: 'string' },
-                    obj: {
-                        type: 'object',
-                        properties: {
-                            some: { type: 'string' }
-                        }
+                        description: 'user username'
                     }
                 }
             },
             response: {
-                201: {
+                200: {
                     description: 'Successful response',
                     type: 'object',
                     properties: {
@@ -164,45 +162,39 @@ async function main() {
         }
     }, getUserHandler(prisma))
 
-    server.post('/users/:id', {
+    server.post('/users/:username', {
         schema: {
             description: 'post some data',
-            tags: ['user', 'code'],
+            tags: ['users',],
             summary: 'qwerty',
             params: {
                 type: 'object',
                 properties: {
-                    id: {
+                    username: {
                         type: 'string',
-                        description: 'user id'
+                        description: 'user username'
                     }
                 }
             },
             body: {
                 type: 'object',
                 properties: {
-                    hello: { type: 'string' },
-                    obj: {
-                        type: 'object',
-                        properties: {
-                            some: { type: 'string' }
-                        }
-                    }
+                    $ref: 'user#'
                 }
             },
             response: {
-                201: {
+                200: {
                     description: 'Successful response',
                     type: 'object',
                     properties: {
-                        hello: { type: 'string' }
+                        id: { type: 'string' }
                     }
                 },
                 default: {
                     description: 'Default response',
                     type: 'object',
                     properties: {
-                        foo: { type: 'string' }
+                        message: { type: 'string' }
                     }
                 }
             },
@@ -214,79 +206,79 @@ async function main() {
         }
     }, updateUserHandler(prisma))
 
-    server.get('/users/search', {
-        schema: {
-            description: 'post some data',
-            tags: ['user', 'code'],
-            summary: 'qwerty',
-            params: {
-                type: 'object',
-                properties: {
-                    id: {
-                        type: 'string',
-                        description: 'user id'
-                    }
-                }
-            },
-            body: {
-                type: 'object',
-                properties: {
-                    hello: { type: 'string' },
-                    obj: {
-                        type: 'object',
-                        properties: {
-                            some: { type: 'string' }
-                        }
-                    }
-                }
-            },
-            response: {
-                201: {
-                    description: 'Successful response',
-                    type: 'object',
-                    properties: {
-                        hello: { type: 'string' }
-                    }
-                },
-                default: {
-                    description: 'Default response',
-                    type: 'object',
-                    properties: {
-                        foo: { type: 'string' }
-                    }
-                }
-            },
-            security: [
-                {
-                    "apiKey": []
-                }
-            ]
-        }
-    }, searchUserHandler(prisma))
+    // server.get('/users/search', {
+    //     schema: {
+    //         description: 'post some data',
+    //         tags: ['user', 'code'],
+    //         summary: 'qwerty',
+    //         params: {
+    //             type: 'object',
+    //             properties: {
+    //                 id: {
+    //                     type: 'string',
+    //                     description: 'user id'
+    //                 }
+    //             }
+    //         },
+    //         body: {
+    //             type: 'object',
+    //             properties: {
+    //                 hello: { type: 'string' },
+    //                 obj: {
+    //                     type: 'object',
+    //                     properties: {
+    //                         some: { type: 'string' }
+    //                     }
+    //                 }
+    //             }
+    //         },
+    //         querystring: {
+    //             type: 'object',
+    //             properties: {
+    //                 hello: { type: 'string' },
+    //                 obj: {
+    //                     type: 'object',
+    //                     properties: {
+    //                         some: { type: 'string' }
+    //                     }
+    //                 }
+    //             }
+    //         },
+    //         response: {
+    //             201: {
+    //                 description: 'Successful response',
+    //                 type: 'object',
+    //                 properties: {
+    //                     hello: { type: 'string' }
+    //                 }
+    //             },
+    //             default: {
+    //                 description: 'Default response',
+    //                 type: 'object',
+    //                 properties: {
+    //                     foo: { type: 'string' }
+    //                 }
+    //             }
+    //         },
+    //         security: [
+    //             {
+    //                 "apiKey": []
+    //             }
+    //         ]
+    //     }
+    // }, searchUserHandler(prisma))
 
     server.get('/debates/:id', {
         schema: {
             description: 'post some data',
-            tags: ['user', 'code'],
+            tags: ['debates'],
             summary: 'qwerty',
             params: {
                 type: 'object',
                 properties: {
                     id: {
                         type: 'string',
-                        description: 'user id'
-                    }
-                }
-            },
-            body: {
-                type: 'object',
-                properties: {
-                    hello: { type: 'string' },
-                    obj: {
-                        type: 'object',
-                        properties: {
-                            some: { type: 'string' }
-                        }
+                        description: 'debate id'
                     }
                 }
             },
@@ -295,14 +287,14 @@ async function main() {
                     description: 'Successful response',
                     type: 'object',
                     properties: {
-                        hello: { type: 'string' }
+                        $ref: 'debate#'
                     }
                 },
                 default: {
                     description: 'Default response',
                     type: 'object',
                     properties: {
-                        foo: { type: 'string' }
+                        message: { type: 'string' }
                     }
                 }
             },
@@ -319,25 +311,12 @@ async function main() {
             description: 'post some data',
             tags: ['user', 'code'],
             summary: 'qwerty',
-            params: {
-                type: 'object',
-                properties: {
-                    id: {
-                        type: 'string',
-                        description: 'user id'
-                    }
-                }
-            },
             body: {
                 type: 'object',
                 properties: {
-                    hello: { type: 'string' },
-                    obj: {
-                        type: 'object',
-                        properties: {
-                            some: { type: 'string' }
-                        }
-                    }
+                    title: { type: 'string' },
+                    author: { type: 'string' },
+                    participants: { type: 'array', items: { type: 'string' } },
                 }
             },
             response: {
@@ -352,7 +331,7 @@ async function main() {
                     description: 'Default response',
                     type: 'object',
                     properties: {
-                        foo: { type: 'string' }
+                        message: { type: 'string' }
                     }
                 }
             },
@@ -364,30 +343,25 @@ async function main() {
         }
     }, newDebateHandler(prisma))
 
-    server.post('/debates/:id/', {
+    server.post('/debates/:id', {
         schema: {
             description: 'post some data',
-            tags: ['user', 'code'],
+            tags: ['debates'],
             summary: 'qwerty',
             params: {
                 type: 'object',
                 properties: {
                     id: {
                         type: 'string',
-                        description: 'user id'
+                        description: 'debate id',
                     }
                 }
             },
             body: {
                 type: 'object',
                 properties: {
-                    hello: { type: 'string' },
-                    obj: {
-                        type: 'object',
-                        properties: {
-                            some: { type: 'string' }
-                        }
-                    }
+                    participants: { type: 'array', items: { type: 'string' } },
+                    arguments: { type: 'array', items: { type: 'object', properties: { $ref: 'argument#' } } },
                 }
             },
             response: {
@@ -395,14 +369,14 @@ async function main() {
                     description: 'Successful response',
                     type: 'object',
                     properties: {
-                        hello: { type: 'string' }
+                        id: { type: 'string' }
                     }
                 },
                 default: {
                     description: 'Default response',
                     type: 'object',
                     properties: {
-                        foo: { type: 'string' }
+                        message: { type: 'string' }
                     }
                 }
             },
@@ -414,80 +388,65 @@ async function main() {
         }
     }, updateDebateHandler(prisma))
 
-    server.get('/debates/search', {
-        schema: {
-            description: 'post some data',
-            tags: ['user', 'code'],
-            summary: 'qwerty',
-            params: {
-                type: 'object',
-                properties: {
-                    id: {
-                        type: 'string',
-                        description: 'user id'
-                    }
-                }
-            },
-            body: {
-                type: 'object',
-                properties: {
-                    hello: { type: 'string' },
-                    obj: {
-                        type: 'object',
-                        properties: {
-                            some: { type: 'string' }
-                        }
-                    }
-                }
-            },
-            response: {
-                201: {
-                    description: 'Successful response',
-                    type: 'object',
-                    properties: {
-                        hello: { type: 'string' }
-                    }
-                },
-                default: {
-                    description: 'Default response',
-                    type: 'object',
-                    properties: {
-                        foo: { type: 'string' }
-                    }
-                }
-            },
-            security: [
-                {
-                    "apiKey": []
-                }
-            ]
-        }
-    }, searchDebateHandler(prisma))
+    // server.get('/debates/search', {
+    //     schema: {
+    //         description: 'post some data',
+    //         tags: ['user', 'code'],
+    //         summary: 'qwerty',
+    //         params: {
+    //             type: 'object',
+    //             properties: {
+    //                 id: {
+    //                     type: 'string',
+    //                     description: 'user id'
+    //                 }
+    //             }
+    //         },
+    //         body: {
+    //             type: 'object',
+    //             properties: {
+    //                 hello: { type: 'string' },
+    //                 obj: {
+    //                     type: 'object',
+    //                     properties: {
+    //                         some: { type: 'string' }
+    //                     }
+    //                 }
+    //             }
+    //         },
+    //         response: {
+    //             201: {
+    //                 description: 'Successful response',
+    //                 type: 'object',
+    //                 properties: {
+    //                     hello: { type: 'string' }
+    //                 }
+    //             },
+    //             default: {
+    //                 description: 'Default response',
+    //                 type: 'object',
+    //                 properties: {
+    //                     foo: { type: 'string' }
+    //                 }
+    //             }
+    //         },
+    //         security: [
+    //             {
+    //                 "apiKey": []
+    //             }
+    //         ]
+    //     }
+    // }, searchDebateHandler(prisma))
 
     server.get('/debates/trending', {
         schema: {
             description: 'post some data',
             tags: ['user', 'code'],
             summary: 'qwerty',
-            params: {
+            querystring: {
                 type: 'object',
                 properties: {
-                    id: {
-                        type: 'string',
-                        description: 'user id'
-                    }
-                }
-            },
-            body: {
-                type: 'object',
-                properties: {
-                    hello: { type: 'string' },
-                    obj: {
-                        type: 'object',
-                        properties: {
-                            some: { type: 'string' }
-                        }
-                    }
+                    limit: { type: 'number' },
                 }
             },
             response: {
@@ -502,7 +461,7 @@ async function main() {
                     description: 'Default response',
                     type: 'object',
                     properties: {
-                        foo: { type: 'string' }
+                        message: { type: 'string' }
                     }
                 }
             },
@@ -517,27 +476,22 @@ async function main() {
     server.post('/debates/:id/arguments', {
         schema: {
             description: 'post some data',
-            tags: ['user', 'code'],
+            tags: ['debates'],
             summary: 'qwerty',
             params: {
                 type: 'object',
                 properties: {
                     id: {
                         type: 'string',
-                        description: 'user id'
+                        description: 'debate id'
                     }
                 }
             },
             body: {
                 type: 'object',
                 properties: {
-                    hello: { type: 'string' },
-                    obj: {
-                        type: 'object',
-                        properties: {
-                            some: { type: 'string' }
-                        }
-                    }
+                    content: { type: 'string' },
+                    author: { type: 'string' },
                 }
             },
             response: {
@@ -552,7 +506,7 @@ async function main() {
                     description: 'Default response',
                     type: 'object',
                     properties: {
-                        foo: { type: 'string' }
+                        message: { type: 'string' }
                     }
                 }
             },
@@ -578,3 +532,5 @@ async function main() {
 
     await start()
 }
+
+main()
