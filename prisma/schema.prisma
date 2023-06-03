@@ -11,27 +11,27 @@ datasource db {
 }
 
 model Argument {
-  id        Int      @id @default(autoincrement())
-  content   String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-  author    User     @relation(fields: [authorId], references: [id])
-  authorId  Int
-  debate    Debate   @relation(fields: [debateId], references: [id])
-  debateId  Int
+  id             Int      @id @default(autoincrement())
+  content        String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  author         User     @relation(fields: [authorUsername], references: [username])
+  authorUsername String
+  debate         Debate   @relation(fields: [debateId], references: [id])
+  debateId       Int
 }
 
 model Debate {
-  id           Int        @id @default(autoincrement())
-  title        String
-  debateType   String
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-  author       User       @relation(fields: [authorId], references: [id])
-  authorId     Int
-  turnId       Int?
-  participants User[]     @relation("DebateParticipants")
-  arguments    Argument[]
+  id             Int        @id @default(autoincrement())
+  title          String
+  debateType     String
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+  author         User       @relation(fields: [authorUsername], references: [username])
+  authorUsername String
+  turnUsername   String
+  participants   User[]     @relation("DebateParticipants")
+  arguments      Argument[]
 }
 
 model User {

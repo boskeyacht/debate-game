@@ -16,6 +16,7 @@ import {
     postPublicDebateArgumentHandler,
     mixpanelLogger
 } from './handlers.js'
+import { collapseTextChangeRangesAcrossMultipleVersions } from 'typescript'
 
 dotenv.config()
 
@@ -59,8 +60,42 @@ async function main() {
         type: 'object',
         properties: {
             id: {
-                type: 'string',
+                type: 'integer',
                 description: 'user id'
+            },
+            username: {
+                type: 'string',
+                description: 'username'
+            },
+            email: {
+                type: 'string',
+                description: 'email'
+            },
+            password: {
+                type: 'string',
+                description: 'password'
+            },
+            createdAt: {
+                type: 'string',
+                description: 'date of creation'
+            },
+            updatedAt: {
+                type: 'string',
+                description: 'date of last update'
+            },
+            debates: {
+                type: 'array',
+                items: {
+                    $ref: 'debate#'
+                },
+                description: 'debates'
+            },
+            arguments: {
+                type: 'array',
+                items: {
+                    $ref: 'argument#'
+                },
+                description: 'arguments'
             }
         }
     })
@@ -70,8 +105,52 @@ async function main() {
         type: 'object',
         properties: {
             id: {
-                type: 'string',
+                type: 'itneger',
                 description: 'user id'
+            },
+            title: {
+                type: 'string',
+                description: 'debate title'
+            },
+            debateType: {
+                type: 'string',
+                description: 'debate type'
+            },
+            createdAt: {
+                type: 'string',
+                description: 'date of creation'
+            },
+            updatedAt: {
+                type: 'string',
+                description: 'date of last update'
+            },
+            author: {
+                $ref: 'user#',
+                description: 'author'
+            },
+            authorId: {
+                type: 'integer',
+                description: 'author id'
+            },
+            turnId: {
+                type: 'integer',
+                description: 'turn id'
+            },
+            arguments: {
+                type: 'array',
+                items: {
+                    $ref: 'argument#',
+                    description: 'arguments'
+                },
+                description: 'arguments'
+            },
+            participants: {
+                type: 'array',
+                items: {
+                    $ref: 'user#',
+                    description: 'participants'
+                },
+
             }
         }
     })
@@ -81,9 +160,37 @@ async function main() {
         type: 'object',
         properties: {
             id: {
-                type: 'string',
+                type: 'integer',
                 description: 'user id'
-            }
+            },
+            content: {
+                type: 'string',
+                description: 'argument content'
+            },
+            createdAt: {
+                type: 'string',
+                description: 'date of creation'
+            },
+            updatedAt: {
+                type: 'string',
+                description: 'date of last update'
+            },
+            author: {
+                $ref: 'user#',
+                description: 'author'
+            },
+            authorId: {
+                type: 'integer',
+                description: 'author id'
+            },
+            debate: {
+                $ref: 'debate#',
+                description: 'debate'
+            },
+            debateId: {
+                type: 'integer',
+                description: 'debate id'
+            },
         }
     })
 
@@ -110,6 +217,7 @@ async function main() {
                     description: 'Default response',
                     type: 'object',
                     properties: {
+                        error: { type: 'string' },
                         message: { type: 'string' }
                     }
                 }
@@ -141,14 +249,15 @@ async function main() {
                     description: 'Successful response',
                     type: 'object',
                     properties: {
-                        hello: { type: 'string' }
+                        $ref: 'user#'
                     }
                 },
                 default: {
                     description: 'Default response',
                     type: 'object',
                     properties: {
-                        foo: { type: 'string' }
+                        error: { type: 'string' },
+                        message: { type: 'string' }
                     }
                 }
             },
@@ -266,7 +375,7 @@ async function main() {
     //     }
     // }, searchUserHandler(prisma))
 
-    server.post('/debates', {
+    server.post('/debates/private', {
         schema: {
             description: 'post some data',
             tags: ['user', 'code'],
@@ -275,8 +384,8 @@ async function main() {
                 type: 'object',
                 properties: {
                     title: { type: 'string' },
-                    author: { type: 'string' },
-                    participants: { type: 'array', items: { type: 'string' } },
+                    authorUsername: { type: 'string' },
+                    opponent: { type: 'string' },
                 }
             },
             response: {
@@ -284,13 +393,14 @@ async function main() {
                     description: 'Successful response',
                     type: 'object',
                     properties: {
-                        hello: { type: 'string' }
+                        $ref: 'debate#'
                     }
                 },
                 default: {
                     description: 'Default response',
                     type: 'object',
                     properties: {
+                        error: { type: 'string' },
                         message: { type: 'string' }
                     }
                 }
@@ -303,7 +413,7 @@ async function main() {
         }
     }, newPrivateDebateHandler(prisma))
 
-    server.get('/debates/:id', {
+    server.get('/debates/:id/private', {
         schema: {
             description: 'post some data',
             tags: ['debates'],
@@ -341,7 +451,7 @@ async function main() {
         }
     }, getPrivateDebateHandler(prisma))
 
-    server.post('/debates/:id/arguments/public', {
+    server.post('/debates/:id/arguments/private', {
         schema: {
             description: 'post some data',
             tags: ['debates'],
@@ -358,15 +468,11 @@ async function main() {
             body: {
                 type: 'object',
                 properties: {
-                    participants: { type: 'array', items: { type: 'string' } },
-                    arguments: {
-                        type: 'array',
-                        items: {
-                            type: 'object',
-                            properties: {
-                                id: { type: 'string' },
-                                text: { type: 'string' },
-                            }
+                    argument: {
+                        type: 'object',
+                        properties: {
+                            content: { type: 'string' },
+                            authorUsername: { type: 'string' },
                         }
                     },
                 }
@@ -376,13 +482,14 @@ async function main() {
                     description: 'Successful response',
                     type: 'object',
                     properties: {
-                        id: { type: 'string' }
+                        $ref: 'argument#'
                     }
                 },
                 default: {
                     description: 'Default response',
                     type: 'object',
                     properties: {
+                        error: { type: 'string' },
                         message: { type: 'string' }
                     }
                 }
@@ -395,7 +502,7 @@ async function main() {
         }
     }, postPrivateDebateArgumentHandler(prisma))
 
-    server.post('/debates', {
+    server.post('/debates/public', {
         schema: {
             description: 'post some data',
             tags: ['user', 'code'],
@@ -404,8 +511,8 @@ async function main() {
                 type: 'object',
                 properties: {
                     title: { type: 'string' },
-                    author: { type: 'string' },
-                    participants: { type: 'array', items: { type: 'string' } },
+                    authorUsername: { type: 'string' },
+                    opponent: { type: 'string' },
                 }
             },
             response: {
@@ -413,13 +520,14 @@ async function main() {
                     description: 'Successful response',
                     type: 'object',
                     properties: {
-                        hello: { type: 'string' }
+                        $ref: 'debate#'
                     }
                 },
                 default: {
                     description: 'Default response',
                     type: 'object',
                     properties: {
+                        error: { type: 'string' },
                         message: { type: 'string' }
                     }
                 }
@@ -432,7 +540,7 @@ async function main() {
         }
     }, newPublicDebateHandler(prisma))
 
-    server.get('/debates/:id', {
+    server.get('/debates/:id/public', {
         schema: {
             description: 'post some data',
             tags: ['debates'],
@@ -458,6 +566,7 @@ async function main() {
                     description: 'Default response',
                     type: 'object',
                     properties: {
+                        error: { type: 'string' },
                         message: { type: 'string' }
                     }
                 }
@@ -470,7 +579,7 @@ async function main() {
         }
     }, getPublicDebateHandler(prisma))
 
-    server.post('/debates/:id/arguments/private', {
+    server.post('/debates/:id/arguments/public', {
         schema: {
             description: 'post some data',
             tags: ['debates'],
@@ -487,15 +596,11 @@ async function main() {
             body: {
                 type: 'object',
                 properties: {
-                    participants: { type: 'array', items: { type: 'string' } },
-                    arguments: {
-                        type: 'array',
-                        items: {
-                            type: 'object',
-                            properties: {
-                                id: { type: 'string' },
-                                text: { type: 'string' },
-                            }
+                    argument: {
+                        type: 'object',
+                        properties: {
+                            content: { type: 'string' },
+                            authorUsername: { type: 'string' },
                         }
                     },
                 }
@@ -505,13 +610,14 @@ async function main() {
                     description: 'Successful response',
                     type: 'object',
                     properties: {
-                        id: { type: 'string' }
+                        $ref: 'argument#'
                     }
                 },
                 default: {
                     description: 'Default response',
                     type: 'object',
                     properties: {
+                        error: { type: 'string' },
                         message: { type: 'string' }
                     }
                 }
@@ -619,13 +725,16 @@ async function main() {
     //     }
     // }, newArgumentHandler(prisma))
 
-    fs.writeFileSync('./docs/swagger.yml', server.swagger({ yaml: true }))
+    fs.writeFileSync('../swagger.yml', server.swagger({ yaml: true }))
 
     const start = async () => {
         try {
+            console.log("📣 Starting server on port 3333\n")
+
             await server.listen({ port: 3333 })
         } catch (err) {
             server.log.error(err)
+
             process.exit(1)
         }
     }

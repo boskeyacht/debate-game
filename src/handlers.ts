@@ -65,7 +65,7 @@ export function newUserHandler(prisma: PrismaClient) {
             res.code(201).send({
                 data:
                 {
-                    id: req.body.username,
+                    username: req.body.username,
                 }
             })
 
@@ -126,10 +126,10 @@ export function getUserHandler(prisma: PrismaClient) {
 }
 
 type NewPrivateDebateRequest = FastifyRequest<{
-    Params: {
-        id: string,
+    Body: {
         title: string,
         opponent: string,
+        authorUsername: string,
     }
 }>
 
@@ -138,13 +138,13 @@ export function newPrivateDebateHandler(prisma: PrismaClient) {
         try {
             const user = await prisma.user.findUnique({
                 where: {
-                    username: req.params.id
+                    username: req.body.authorUsername
                 }
             })
 
             if (user == null) {
                 res.code(404).send({
-                    error: 'Not found',
+                    error: 'Bad request',
                     message: 'User not found'
                 })
 
@@ -153,13 +153,13 @@ export function newPrivateDebateHandler(prisma: PrismaClient) {
 
             const opponent = await prisma.user.findUnique({
                 where: {
-                    username: req.params.opponent
+                    username: req.body.opponent
                 }
             })
 
             if (opponent == null) {
                 res.code(404).send({
-                    error: 'Not found',
+                    error: 'Bad request',
                     message: 'Opponent not found'
                 })
 
@@ -171,7 +171,8 @@ export function newPrivateDebateHandler(prisma: PrismaClient) {
                     title: 'title',
                     createdAt: new Date().toISOString(),
                     updatedAt: new Date().toISOString(),
-                    authorId: user.id,
+                    authorUsername: user.username,
+                    turnUsername: user.username,
                     debateType: "PRIVATE",
                     participants: {
                         connect: [
@@ -263,7 +264,7 @@ type PostPrivateDebateArgumentRequest = FastifyRequest<{
     Body: {
         argument: {
             content: string,
-            authorId: number,
+            authorUsername: string,
         },
     }
 }>
@@ -294,8 +295,8 @@ export function postPrivateDebateArgumentHandler(prisma: PrismaClient) {
                 return
             }
 
-            if (debate.turnId != req.body.argument.authorId) {
-                console.log(`It is not ${req.body.argument.authorId}'s turn to post an argument`)
+            if (debate.turnUsername != req.body.argument.authorUsername) {
+                console.log(`It is not ${req.body.argument.authorUsername}'s turn to post an argument`)
 
                 res.code(403).send({
                     error: 'Forbidden',
@@ -322,7 +323,7 @@ export function postPrivateDebateArgumentHandler(prisma: PrismaClient) {
                     content: req.body.argument.content,
                     createdAt: new Date().toISOString(),
                     updatedAt: new Date().toISOString(),
-                    authorId: req.body.argument.authorId,
+                    authorUsername: req.body.argument.authorUsername,
                     debateId: parseInt(req.params.id),
                 }
             });
@@ -355,7 +356,7 @@ export function postPrivateDebateArgumentHandler(prisma: PrismaClient) {
             try {
                 await prisma.user.update({
                     where: {
-                        id: req.body.argument.authorId
+                        username: req.body.argument.authorUsername
                     },
                     data: {
                         arguments: {
@@ -384,7 +385,7 @@ export function postPrivateDebateArgumentHandler(prisma: PrismaClient) {
                             id: debate.id
                         },
                         data: {
-                            turnId: debate.participants.find((participant) => participant.id !== debate?.turnId)?.id
+                            turnUsername: debate.participants.find((participant) => participant.username !== debate?.turnUsername)?.username
 
                         }
                     });
@@ -436,7 +437,7 @@ export function postPrivateDebateArgumentHandler(prisma: PrismaClient) {
 type NewPublicDebateRequest = FastifyRequest<{
     Params: {
         title: string,
-        authorId: number,
+        authorUsername: string,
     }
 }>
 
@@ -448,11 +449,12 @@ export function newPublicDebateHandler(prisma: PrismaClient) {
                     title: req.params.title,
                     createdAt: new Date().toISOString(),
                     updatedAt: new Date().toISOString(),
-                    authorId: req.params.authorId,
+                    authorUsername: req.params.authorUsername,
+                    turnUsername: req.params.authorUsername,
                     debateType: "PUBLIC",
                     participants: {
                         connect: {
-                            id: req.params.authorId,
+                            username: req.params.authorUsername,
                         },
                     },
                 }
@@ -461,7 +463,7 @@ export function newPublicDebateHandler(prisma: PrismaClient) {
             try {
                 await prisma.user.update({
                     where: {
-                        id: req.params.authorId
+                        username: req.params.authorUsername
                     },
                     data: {
                         debates: {
@@ -562,7 +564,7 @@ type PostPublicDebateArgumentRequest = FastifyRequest<{
     Body: {
         argument: {
             content: string,
-            authorId: number,
+            authorUsername: string,
         }
     }
 }>
@@ -575,7 +577,7 @@ export function postPublicDebateArgumentHandler(prisma: PrismaClient) {
                     content: req.body.argument.content,
                     createdAt: new Date().toISOString(),
                     updatedAt: new Date().toISOString(),
-                    authorId: req.body.argument.authorId,
+                    authorUsername: req.body.argument.authorUsername,
                     debateId: parseInt(req.params.id),
                 }
             });
@@ -608,7 +610,7 @@ export function postPublicDebateArgumentHandler(prisma: PrismaClient) {
             try {
                 await prisma.user.update({
                     where: {
-                        id: req.body.argument.authorId
+                        username: req.body.argument.authorUsername
                     },
                     data: {
                         arguments: {
@@ -678,13 +680,13 @@ export function postPublicDebateArgumentHandler(prisma: PrismaClient) {
 //         debate: {
 //             title: string,
 //             debateType: string,
-//             authorId: number,
+//             authorUsername: number,
 //             participants: User[],
 //         },
 //         argument: {
 //             title: string,
 //             content: string,
-//             authorId: number,
+//             authorUsername: number,
 //             debateId: number,
 //         }
 //     }
@@ -711,7 +713,7 @@ export function postPublicDebateArgumentHandler(prisma: PrismaClient) {
 //                             title: req.body.debate.title,
 //                             createdAt: new Date().toISOString(),
 //                             updatedAt: new Date().toISOString(),
-//                             authorId: user.id,
+//                             authorUsername: user.id,
 //                             debateType: "PUBLIC",
 //                             participants: {
 //                                 connect: {
@@ -729,7 +731,7 @@ export function postPublicDebateArgumentHandler(prisma: PrismaClient) {
 //                             title: req.body.debate.title,
 //                             createdAt: new Date().toISOString(),
 //                             updatedAt: new Date().toISOString(),
-//                             authorId: user.id,
+//                             authorUsername: user.id,
 //                             debateType: "PRIVATE",
 //                             participants: {
 //                                 connect: {
