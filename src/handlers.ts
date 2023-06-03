@@ -1,5 +1,5 @@
 import { FastifyReply, FastifyRequest, HookHandlerDoneFunction, RouteHandlerMethod } from "fastify";
-import { PrismaClient } from '@prisma/client'
+import { Argument, Debate, PrismaClient, User } from '@prisma/client'
 import { Mixpanel } from "mixpanel";
 import { v4 as uuidv4 } from 'uuid';
 
@@ -41,7 +41,9 @@ export function newUserHandler(prisma: PrismaClient) {
                 return
             }
 
-        } catch {
+        } catch (e) {
+            console.log("Error querying user: ", e)
+
             res.code(500).send({
                 error: 'Internal server error',
                 message: 'Error querying user'
@@ -68,7 +70,9 @@ export function newUserHandler(prisma: PrismaClient) {
             })
 
             return
-        } catch {
+        } catch (e) {
+            console.log("Error creating user: ", e)
+
             res.code(500).send({
                 error: 'Internal server error',
                 message: 'Error creating user'
@@ -108,7 +112,9 @@ export function getUserHandler(prisma: PrismaClient) {
 
             return
 
-        } catch {
+        } catch (e) {
+            console.log("Error querying user: ", e)
+
             res.code(500).send({
                 error: 'Internal server error',
                 message: 'Error querying user'
@@ -237,8 +243,8 @@ export function getPrivateDebateHandler(prisma: PrismaClient) {
 
             return
 
-        } catch {
-            console.log("Error querying debate")
+        } catch (e) {
+            console.log("Error querying debate: ", e)
 
             res.code(500).send({
                 error: 'Internal server error',
@@ -264,6 +270,52 @@ type PostPrivateDebateArgumentRequest = FastifyRequest<{
 
 export function postPrivateDebateArgumentHandler(prisma: PrismaClient) {
     return (async (req: PostPrivateDebateArgumentRequest, res: FastifyReply) => {
+        var debate: Debate & { arguments: Argument[]; participants: User[]; } | null;
+
+        try {
+            debate = await prisma.debate.findUnique({
+                where: {
+                    id: parseInt(req.params.id)
+                },
+                include: {
+                    arguments: true,
+                    participants: true,
+                }
+            })
+
+            if (debate == null) {
+                console.log(`Debate ${req.params.id} not found`)
+
+                res.code(404).send({
+                    error: 'Not found',
+                    message: 'Debate not found'
+                })
+
+                return
+            }
+
+            if (debate.turnId != req.body.argument.authorId) {
+                console.log(`It is not ${req.body.argument.authorId}'s turn to post an argument`)
+
+                res.code(403).send({
+                    error: 'Forbidden',
+                    message: 'User is not allowed to post an argument'
+                })
+
+                return
+            }
+
+        } catch (e) {
+            console.log("Error querying debate: ", e)
+
+            res.code(500).send({
+                error: 'Internal server error',
+                message: 'Error querying debate'
+            })
+
+            return
+        }
+
         try {
             const argument = await prisma.argument.create({
                 data: {
@@ -289,8 +341,8 @@ export function postPrivateDebateArgumentHandler(prisma: PrismaClient) {
                     }
                 });
 
-            } catch (error) {
-                console.log("Error connecting argument to debate: ", error)
+            } catch (e) {
+                console.log("Error connecting argument to debate: ", e)
 
                 res.code(500).send({
                     error: 'Internal server error',
@@ -314,8 +366,8 @@ export function postPrivateDebateArgumentHandler(prisma: PrismaClient) {
                     }
                 });
 
-            } catch (error) {
-                console.log("Error connecting argument to user: ", error)
+            } catch (e) {
+                console.log("Error connecting argument to user: ", e)
 
                 res.code(500).send({
                     error: 'Internal server error',
@@ -325,16 +377,50 @@ export function postPrivateDebateArgumentHandler(prisma: PrismaClient) {
                 return
             }
 
-            res.code(201).send({
-                data: {
-                    argument: argument
+            try {
+                if (debate !== null) {
+                    await prisma.debate.update({
+                        where: {
+                            id: debate.id
+                        },
+                        data: {
+                            turnId: debate.participants.find((participant) => participant.id !== debate?.turnId)?.id
+
+                        }
+                    });
+                } else {
+                    console.log("Error updating debate")
+
+                    res.code(500).send({
+                        error: 'Internal server error',
+                        message: 'Error updating debate'
+                    })
+
+                    return
                 }
-            });
 
-            return
 
-        } catch (error) {
-            console.log("Error creating argument: ", error)
+                res.code(201).send({
+                    data: {
+                        argument: argument
+                    }
+                });
+
+                return
+
+            } catch (e) {
+                console.log("Error creating argument: ", e)
+
+                res.code(500).send({
+                    error: 'Internal server error',
+                    message: 'Error creating argument'
+                })
+
+                return
+            }
+
+        } catch (e) {
+            console.log("Error creating argument: ", e)
 
             res.code(500).send({
                 error: 'Internal server error',
@@ -386,8 +472,8 @@ export function newPublicDebateHandler(prisma: PrismaClient) {
                     }
                 });
 
-            } catch (error) {
-                console.log("Error connecting debate to user: ", error)
+            } catch (e) {
+                console.log("Error connecting debate to user: ", e)
 
                 res.code(500).send({
                     error: 'Internal server error',
@@ -405,8 +491,8 @@ export function newPublicDebateHandler(prisma: PrismaClient) {
 
             return
 
-        } catch (error) {
-            console.log("Error creating debate: ", error)
+        } catch (e) {
+            console.log("Error creating debate: ", e)
 
             res.code(500).send({
                 error: 'Internal server error',
@@ -456,8 +542,8 @@ export function getPublicDebateHandler(prisma: PrismaClient) {
 
             return
 
-        } catch (error) {
-            console.log("Error creating debate: ", error)
+        } catch (e) {
+            console.log("Error creating debate: ", e)
 
             res.code(500).send({
                 error: 'Internal server error',
@@ -508,8 +594,8 @@ export function postPublicDebateArgumentHandler(prisma: PrismaClient) {
                     }
                 });
 
-            } catch (error) {
-                console.log("Error connecting argument to debate: ", error)
+            } catch (e) {
+                console.log("Error connecting argument to debate: ", e)
 
                 res.code(500).send({
                     error: 'Internal server error',
@@ -533,8 +619,8 @@ export function postPublicDebateArgumentHandler(prisma: PrismaClient) {
                     }
                 });
 
-            } catch (error) {
-                console.log("Error connecting argument to user: ", error)
+            } catch (e) {
+                console.log("Error connecting argument to user: ", e)
 
                 res.code(500).send({
                     error: 'Internal server error',
@@ -552,8 +638,8 @@ export function postPublicDebateArgumentHandler(prisma: PrismaClient) {
 
             return
 
-        } catch (error) {
-            console.log("Error creating debate: ", error)
+        } catch (e) {
+            console.log("Error creating debate: ", e)
 
             res.code(500).send({
                 error: 'Internal server error',
@@ -585,41 +671,6 @@ export function postPublicDebateArgumentHandler(prisma: PrismaClient) {
 // export function searchUserHandler(prisma: PrismaClient) {
 //     return (async (req: SearchUserRequest, res: FastifyReply) => { })
 // }
-
-// interface Argument {
-//     id: number,
-//     title: string,
-//     createdAt: string,
-//     updatedAt: string,
-//     author: User,
-//     authorId: number,
-//     debate: Debate,
-//     debateId: number,
-// }
-
-// interface User {
-//     id: number,
-//     email: string,
-//     username: string,
-//     createdAt: string,
-//     updatedAt: string,
-//     debates: Debate[],
-//     authoredDebates: Debate[],
-//     arguments: {}[],
-// }
-
-// interface Debate {
-//     id: number,
-//     title: string,
-//     debateType: string,
-//     createdAt: string,
-//     updatedAt: string,
-//     author: User | undefined,
-//     authorId: number,
-//     participants: User[] | undefined,
-//     arguments: Argument[] | undefined,
-// }
-
 
 // type UpdateUserRequest = FastifyRequest<{
 //     Params: { username: string },

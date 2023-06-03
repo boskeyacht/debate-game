@@ -29,6 +29,7 @@ model Debate {
   updatedAt    DateTime   @updatedAt
   author       User       @relation(fields: [authorId], references: [id])
   authorId     Int
+  turnId       Int?
   participants User[]     @relation("DebateParticipants")
   arguments    Argument[]
 }
