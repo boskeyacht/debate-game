@@ -105,7 +105,7 @@ async function main() {
         type: 'object',
         properties: {
             id: {
-                type: 'itneger',
+                type: 'integer',
                 description: 'user id'
             },
             title: {
@@ -249,7 +249,7 @@ async function main() {
                     description: 'Successful response',
                     type: 'object',
                     properties: {
-                        $ref: 'user#'
+                        data: { $ref: 'user#' }
                     }
                 },
                 default: {
@@ -393,7 +393,7 @@ async function main() {
                     description: 'Successful response',
                     type: 'object',
                     properties: {
-                        $ref: 'debate#'
+                        data: { $ref: 'debate#' }
                     }
                 },
                 default: {
@@ -432,7 +432,7 @@ async function main() {
                     description: 'Successful response',
                     type: 'object',
                     properties: {
-                        $ref: 'debate#'
+                        data: { $ref: 'debate#' }
                     }
                 },
                 default: {
@@ -482,7 +482,7 @@ async function main() {
                     description: 'Successful response',
                     type: 'object',
                     properties: {
-                        $ref: 'argument#'
+                        data: { $ref: 'argument#' }
                     }
                 },
                 default: {
@@ -520,7 +520,7 @@ async function main() {
                     description: 'Successful response',
                     type: 'object',
                     properties: {
-                        $ref: 'debate#'
+                        data: { $ref: 'debate#' }
                     }
                 },
                 default: {
@@ -559,7 +559,7 @@ async function main() {
                     description: 'Successful response',
                     type: 'object',
                     properties: {
-                        $ref: 'debate#'
+                        data: { $ref: 'debate#' }
                     }
                 },
                 default: {
@@ -610,7 +610,7 @@ async function main() {
                     description: 'Successful response',
                     type: 'object',
                     properties: {
-                        $ref: 'argument#'
+                        data: { $ref: 'argument#' }
                     }
                 },
                 default: {
