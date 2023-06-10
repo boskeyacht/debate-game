@@ -24,7 +24,20 @@ dotenv.config()
 // TODO: handle empty mixpanel token case in middleware
 async function main() {
     const server: FastifyInstance = Fastify({
-        logger: true
+        logger: {
+            level: 'info',
+            timestamp: function () {
+                return `,"time":"${new Date().toISOString()}"`
+            },
+            formatters: {
+                level(label, number) {
+                    return { level: label }
+                },
+                log(object) {
+                    return { message: object.msg }
+                }
+            }
+        }
     })
 
     const prisma = new PrismaClient()
