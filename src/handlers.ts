@@ -1,6 +1,8 @@
 import { FastifyReply, FastifyRequest, HookHandlerDoneFunction, RouteHandlerMethod } from "fastify";
 import { Argument, Debate, PrismaClient, User } from '@prisma/client'
 import { Mixpanel } from "mixpanel";
+import path from 'path';
+import fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
 
 export async function mixpanelLogger(mixpanel: Mixpanel) {
@@ -650,6 +652,50 @@ export function postPublicDebateArgumentHandler(prisma: PrismaClient) {
 
             return
         }
+    })
+}
+
+export function aiPluginHandler() {
+    return (async (req: FastifyRequest, res: FastifyReply) => {
+        res.code(200).send({
+            "schema_version": "v1",
+            "name_for_human": "Debate Game",
+            "name_for_model": "Debate Game with Judge",
+            "description_for_human": "Need to debate with a friend about something? Want to test your debate skills against the public? Debate with anyone about anything with this plugin!",
+            "description_for_model": "This plugin enables two different forms of debate. The first being, two users can engage in a debate in which you are the judge, users choose the topic, and are each given two chances to make their case. After each user has made their case, you can decide who made the better argument. The user with the most points at the end of the debate wins. The second form enables a public debate with a leaderboard, where anyone can post an argument to a debate with a predetermined topic. When judging the arguments, make sure to consider relevance, clarity, evidence, and persuasiveness.",
+            "auth": {
+                "type": "none"
+            },
+            "api": {
+                "type": "openapi",
+                "url": "http://localhost:3333/openapi.yaml"
+            },
+            "logo_url": "http://localhost:3333/logo.png",
+            "contact_email": "jabari@pulp.chat",
+            "legal_info_url": "http://localhost:3333/legal"
+        })
+
+        return
+    })
+}
+
+export function logoHandler() {
+    return (async (request: FastifyRequest, reply: FastifyReply) => {
+        const imagePath = path.join(__dirname, '../assets/debaters-2.jpg');
+        fs.readFile(imagePath, (err, data) => {
+            if (err) {
+                reply.code(500).send({
+                    error: "Internal server error",
+                    message: err
+                });
+
+                return
+            } else {
+                reply.type('image/jpeg').send(data);
+
+                return
+            }
+        });
     })
 }
 

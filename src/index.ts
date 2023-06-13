@@ -1,10 +1,10 @@
-import fs from 'fs'
-import Fastify, { FastifyInstance, RouteShorthandOptions } from 'fastify'
-import { Server, IncomingMessage, ServerResponse } from 'http'
-import swagger from '@fastify/swagger'
-import { PrismaClient } from '@prisma/client'
+import fs from 'fs';
+import Fastify, { FastifyInstance, RouteShorthandOptions } from 'fastify';
+import { Server, IncomingMessage, ServerResponse } from 'http';
+import swagger from '@fastify/swagger';
+import { PrismaClient } from '@prisma/client';
 import Mixpanel from 'mixpanel';
-import dotenv from 'dotenv'
+import dotenv from 'dotenv';
 import {
     newUserHandler,
     getUserHandler,
@@ -14,9 +14,10 @@ import {
     getPublicDebateHandler,
     newPublicDebateHandler,
     postPublicDebateArgumentHandler,
-    mixpanelLogger
+    mixpanelLogger,
+    logoHandler,
+    aiPluginHandler,
 } from './handlers.js'
-import { collapseTextChangeRangesAcrossMultipleVersions } from 'typescript'
 
 dotenv.config()
 
@@ -209,7 +210,7 @@ async function main() {
 
     server.post('/users', {
         schema: {
-            description: 'post some data',
+            description: 'Route for creating a new user. The username acts as both identification and authentication, so it must be unique and kept secure.',
             tags: ['users'],
             summary: 'qwerty',
             body: {
@@ -245,7 +246,7 @@ async function main() {
 
     server.get('/users/:username', {
         schema: {
-            description: 'post some data',
+            description: 'Route for fetching a user by it\'s username',
             tags: ['users'],
             summary: 'qwerty',
             params: {
@@ -390,7 +391,7 @@ async function main() {
 
     server.post('/debates/private', {
         schema: {
-            description: 'post some data',
+            description: 'Route for creating a new private debate. The debate is private, so only the author and the opponent should have the ID.',
             tags: ['user', 'code'],
             summary: 'qwerty',
             body: {
@@ -428,7 +429,7 @@ async function main() {
 
     server.get('/debates/:id/private', {
         schema: {
-            description: 'post some data',
+            description: 'Route for fetching a private debate by it\'s id. The debate is private, so only the author and the opponent should have the ID.',
             tags: ['debates'],
             summary: 'qwerty',
             params: {
@@ -466,7 +467,7 @@ async function main() {
 
     server.post('/debates/:id/arguments/private', {
         schema: {
-            description: 'post some data',
+            description: 'Route for posting a new argument to a private debate. The debate is private, so only the author and the opponent should have the ID.',
             tags: ['debates'],
             summary: 'qwerty',
             params: {
@@ -517,7 +518,7 @@ async function main() {
 
     server.post('/debates/public', {
         schema: {
-            description: 'post some data',
+            description: 'Route for creating a new public debate. The debate is public, so anyone can join.',
             tags: ['user', 'code'],
             summary: 'qwerty',
             body: {
@@ -555,7 +556,7 @@ async function main() {
 
     server.get('/debates/:id/public', {
         schema: {
-            description: 'post some data',
+            description: 'Route for fetching a public debate by it\'s id. The debate is public, so anyone can join.',
             tags: ['debates'],
             summary: 'qwerty',
             params: {
@@ -594,7 +595,7 @@ async function main() {
 
     server.post('/debates/:id/arguments/public', {
         schema: {
-            description: 'post some data',
+            description: 'Route for posting a new argument to a public debate. The debate is public, so anyone can join. and post an argument',
             tags: ['debates'],
             summary: 'qwerty',
             params: {
@@ -642,6 +643,108 @@ async function main() {
             ]
         }
     }, postPublicDebateArgumentHandler(prisma))
+
+    server.post('/.well-known/ai-plugin.json', {
+        schema: {
+            description: 'Route for the requires ai-plugin.json file for the AI plugin.',
+            tags: ['debates'],
+            summary: 'qwerty',
+            params: {
+                type: 'object',
+                properties: {
+                    id: {
+                        type: 'string',
+                        description: 'debate id',
+                    }
+                }
+            },
+            body: {
+                type: 'object',
+                properties: {
+                    argument: {
+                        type: 'object',
+                        properties: {
+                            content: { type: 'string' },
+                            authorUsername: { type: 'string' },
+                        }
+                    },
+                }
+            },
+            response: {
+                201: {
+                    description: 'Successful response',
+                    type: 'object',
+                    properties: {
+                        data: { $ref: 'argument#' }
+                    }
+                },
+                default: {
+                    description: 'Default response',
+                    type: 'object',
+                    properties: {
+                        error: { type: 'string' },
+                        message: { type: 'string' }
+                    }
+                }
+            },
+            security: [
+                {
+                    "apiKey": []
+                }
+            ]
+        }
+    }, aiPluginHandler())
+
+    server.post('/debates/:id/arguments/public', {
+        schema: {
+            description: 'Route for posting a new argument to a public debate. The debate is public, so anyone can join. and post an argument',
+            tags: ['debates'],
+            summary: 'qwerty',
+            params: {
+                type: 'object',
+                properties: {
+                    id: {
+                        type: 'string',
+                        description: 'debate id',
+                    }
+                }
+            },
+            body: {
+                type: 'object',
+                properties: {
+                    argument: {
+                        type: 'object',
+                        properties: {
+                            content: { type: 'string' },
+                            authorUsername: { type: 'string' },
+                        }
+                    },
+                }
+            },
+            response: {
+                201: {
+                    description: 'Successful response',
+                    type: 'object',
+                    properties: {
+                        data: { $ref: 'argument#' }
+                    }
+                },
+                default: {
+                    description: 'Default response',
+                    type: 'object',
+                    properties: {
+                        error: { type: 'string' },
+                        message: { type: 'string' }
+                    }
+                }
+            },
+            security: [
+                {
+                    "apiKey": []
+                }
+            ]
+        }
+    }, logoHandler())
 
     // server.get('/debates/search', {
     //     schema: {
