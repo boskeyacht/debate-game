@@ -1,0 +1,518 @@
+openapi: 3.0.3
+info:
+  title: Test swagger
+  description: testing the fastify swagger api
+  version: 0.1.0
+components:
+  securitySchemes:
+    apiKey:
+      type: apiKey
+      name: apiKey
+      in: header
+  schemas: {}
+paths:
+  /users:
+    post:
+      summary: qwerty
+      tags:
+        - users
+      description: Route for creating a new user. The username acts as both
+        identification and authentication, so it must be unique and kept secure.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                username:
+                  type: string
+      security:
+        - apiKey: []
+      responses:
+        "201":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                description: Successful response
+                type: object
+                properties:
+                  username:
+                    type: string
+        default:
+          description: Default response
+          content:
+            application/json:
+              schema:
+                description: Default response
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+  "/users/{username}":
+    get:
+      summary: qwerty
+      tags:
+        - users
+      description: Route for fetching a user by it's username
+      parameters:
+        - schema:
+            type: string
+          in: path
+          name: username
+          required: true
+          description: user username
+      security:
+        - apiKey: []
+      responses:
+        "200":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                description: Successful response
+                type: object
+                properties:
+                  data:
+                    $ref: user#
+        default:
+          description: Default response
+          content:
+            application/json:
+              schema:
+                description: Default response
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+  /debates/private:
+    post:
+      summary: qwerty
+      tags:
+        - user
+        - code
+      description: Route for creating a new private debate. The debate is private, so
+        only the author and the opponent should have the ID.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                authorUsername:
+                  type: string
+                opponent:
+                  type: string
+      security:
+        - apiKey: []
+      responses:
+        "201":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                description: Successful response
+                type: object
+                properties:
+                  data:
+                    $ref: debate#
+        default:
+          description: Default response
+          content:
+            application/json:
+              schema:
+                description: Default response
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+  "/debates/{id}/private":
+    get:
+      summary: qwerty
+      tags:
+        - debates
+      description: Route for fetching a private debate by it's id. The debate is
+        private, so only the author and the opponent should have the ID.
+      parameters:
+        - schema:
+            type: string
+          in: path
+          name: id
+          required: true
+          description: debate id
+      security:
+        - apiKey: []
+      responses:
+        "201":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                description: Successful response
+                type: object
+                properties:
+                  data:
+                    $ref: debate#
+        default:
+          description: Default response
+          content:
+            application/json:
+              schema:
+                description: Default response
+                type: object
+                properties:
+                  message:
+                    type: string
+  "/debates/{id}/arguments/private":
+    post:
+      summary: qwerty
+      tags:
+        - debates
+      description: Route for posting a new argument to a private debate. The debate is
+        private, so only the author and the opponent should have the ID.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                argument:
+                  type: object
+                  properties:
+                    content:
+                      type: string
+                    authorUsername:
+                      type: string
+      parameters:
+        - schema:
+            type: string
+          in: path
+          name: id
+          required: true
+          description: debate id
+      security:
+        - apiKey: []
+      responses:
+        "201":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                description: Successful response
+                type: object
+                properties:
+                  data:
+                    $ref: argument#
+        default:
+          description: Default response
+          content:
+            application/json:
+              schema:
+                description: Default response
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+  /debates/public:
+    post:
+      summary: qwerty
+      tags:
+        - user
+        - code
+      description: Route for creating a new public debate. The debate is public, so
+        anyone can join.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                authorUsername:
+                  type: string
+                opponent:
+                  type: string
+      security:
+        - apiKey: []
+      responses:
+        "201":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                description: Successful response
+                type: object
+                properties:
+                  data:
+                    $ref: debate#
+        default:
+          description: Default response
+          content:
+            application/json:
+              schema:
+                description: Default response
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+  "/debates/{id}/public":
+    get:
+      summary: qwerty
+      tags:
+        - debates
+      description: Route for fetching a public debate by it's id. The debate is
+        public, so anyone can join.
+      parameters:
+        - schema:
+            type: string
+          in: path
+          name: id
+          required: true
+          description: debate id
+      security:
+        - apiKey: []
+      responses:
+        "201":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                description: Successful response
+                type: object
+                properties:
+                  data:
+                    $ref: debate#
+        default:
+          description: Default response
+          content:
+            application/json:
+              schema:
+                description: Default response
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+  "/debates/{id}/arguments/public":
+    post:
+      summary: qwerty
+      tags:
+        - debates
+      description: Route for posting a new argument to a public debate. The debate is
+        public, so anyone can join. and post an argument
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                argument:
+                  type: object
+                  properties:
+                    content:
+                      type: string
+                    authorUsername:
+                      type: string
+      parameters:
+        - schema:
+            type: string
+          in: path
+          name: id
+          required: true
+          description: debate id
+      security:
+        - apiKey: []
+      responses:
+        "201":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                description: Successful response
+                type: object
+                properties:
+                  data:
+                    $ref: argument#
+        default:
+          description: Default response
+          content:
+            application/json:
+              schema:
+                description: Default response
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+  /.well-known/ai-plugin.json:
+    post:
+      summary: qwerty
+      tags:
+        - debates
+      description: Route for the requires ai-plugin.json file for the AI plugin.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                argument:
+                  type: object
+                  properties:
+                    content:
+                      type: string
+                    authorUsername:
+                      type: string
+      parameters:
+        - schema:
+            type: string
+          in: path
+          name: id
+          required: true
+          description: debate id
+      security:
+        - apiKey: []
+      responses:
+        "201":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                description: Successful response
+                type: object
+                properties:
+                  data:
+                    $ref: argument#
+        default:
+          description: Default response
+          content:
+            application/json:
+              schema:
+                description: Default response
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+  /logo.png:
+    post:
+      summary: qwerty
+      tags:
+        - debates
+      description: Route for posting a new argument to a public debate. The debate is
+        public, so anyone can join. and post an argument
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                argument:
+                  type: object
+                  properties:
+                    content:
+                      type: string
+                    authorUsername:
+                      type: string
+      parameters:
+        - schema:
+            type: string
+          in: path
+          name: id
+          required: true
+          description: debate id
+      security:
+        - apiKey: []
+      responses:
+        "201":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                description: Successful response
+                type: object
+                properties:
+                  data:
+                    $ref: argument#
+        default:
+          description: Default response
+          content:
+            application/json:
+              schema:
+                description: Default response
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+  /legal:
+    post:
+      summary: qwerty
+      tags:
+        - debates
+      description: Route for posting a new argument to a public debate. The debate is
+        public, so anyone can join. and post an argument
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                argument:
+                  type: object
+                  properties:
+                    content:
+                      type: string
+                    authorUsername:
+                      type: string
+      parameters:
+        - schema:
+            type: string
+          in: path
+          name: id
+          required: true
+          description: debate id
+      security:
+        - apiKey: []
+      responses:
+        "201":
+          description: Successful response
+          content:
+            application/json:
+              schema:
+                description: Successful response
+                type: object
+                properties:
+                  data:
+                    $ref: argument#
+        default:
+          description: Default response
+          content:
+            application/json:
+              schema:
+                description: Default response
+                type: object
+                properties:
+                  error:
+                    type: string
+                  message:
+                    type: string
+servers:
+  - url: http://localhost

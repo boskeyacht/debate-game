@@ -17,6 +17,7 @@ import {
     mixpanelLogger,
     logoHandler,
     aiPluginHandler,
+    legalHandler,
 } from './handlers.js'
 
 dotenv.config()
@@ -242,7 +243,7 @@ async function main() {
                 }
             ]
         }
-    }, newUserHandler(prisma))
+    }, newUserHandler(prisma, server.log))
 
     server.get('/users/:username', {
         schema: {
@@ -281,7 +282,7 @@ async function main() {
                 }
             ]
         }
-    }, getUserHandler(prisma))
+    }, getUserHandler(prisma, server.log))
 
     // server.post('/users/:username', {
     //     schema: {
@@ -425,7 +426,7 @@ async function main() {
                 }
             ]
         }
-    }, newPrivateDebateHandler(prisma))
+    }, newPrivateDebateHandler(prisma, server.log))
 
     server.get('/debates/:id/private', {
         schema: {
@@ -463,7 +464,7 @@ async function main() {
                 }
             ]
         }
-    }, getPrivateDebateHandler(prisma))
+    }, getPrivateDebateHandler(prisma, server.log))
 
     server.post('/debates/:id/arguments/private', {
         schema: {
@@ -514,7 +515,7 @@ async function main() {
                 }
             ]
         }
-    }, postPrivateDebateArgumentHandler(prisma))
+    }, postPrivateDebateArgumentHandler(prisma, server.log))
 
     server.post('/debates/public', {
         schema: {
@@ -552,7 +553,7 @@ async function main() {
                 }
             ]
         }
-    }, newPublicDebateHandler(prisma))
+    }, newPublicDebateHandler(prisma, server.log))
 
     server.get('/debates/:id/public', {
         schema: {
@@ -591,7 +592,7 @@ async function main() {
                 }
             ]
         }
-    }, getPublicDebateHandler(prisma))
+    }, getPublicDebateHandler(prisma, server.log))
 
     server.post('/debates/:id/arguments/public', {
         schema: {
@@ -642,7 +643,7 @@ async function main() {
                 }
             ]
         }
-    }, postPublicDebateArgumentHandler(prisma))
+    }, postPublicDebateArgumentHandler(prisma, server.log))
 
     server.post('/.well-known/ai-plugin.json', {
         schema: {
@@ -695,7 +696,7 @@ async function main() {
         }
     }, aiPluginHandler())
 
-    server.post('/debates/:id/arguments/public', {
+    server.post('/logo.png', {
         schema: {
             description: 'Route for posting a new argument to a public debate. The debate is public, so anyone can join. and post an argument',
             tags: ['debates'],
@@ -744,7 +745,58 @@ async function main() {
                 }
             ]
         }
-    }, logoHandler())
+    }, logoHandler(server.log))
+
+    server.post('/legal', {
+        schema: {
+            description: 'Route for posting a new argument to a public debate. The debate is public, so anyone can join. and post an argument',
+            tags: ['debates'],
+            summary: 'qwerty',
+            params: {
+                type: 'object',
+                properties: {
+                    id: {
+                        type: 'string',
+                        description: 'debate id',
+                    }
+                }
+            },
+            body: {
+                type: 'object',
+                properties: {
+                    argument: {
+                        type: 'object',
+                        properties: {
+                            content: { type: 'string' },
+                            authorUsername: { type: 'string' },
+                        }
+                    },
+                }
+            },
+            response: {
+                201: {
+                    description: 'Successful response',
+                    type: 'object',
+                    properties: {
+                        data: { $ref: 'argument#' }
+                    }
+                },
+                default: {
+                    description: 'Default response',
+                    type: 'object',
+                    properties: {
+                        error: { type: 'string' },
+                        message: { type: 'string' }
+                    }
+                }
+            },
+            security: [
+                {
+                    "apiKey": []
+                }
+            ]
+        }
+    }, legalHandler())
 
     // server.get('/debates/search', {
     //     schema: {
@@ -841,12 +893,12 @@ async function main() {
     //     }
     // }, newArgumentHandler(prisma))
 
-    fs.writeFileSync('../swagger.yml', server.swagger({ yaml: true }))
+    console.log(process.cwd())
+
+    fs.writeFileSync('openapi.yml', server.swagger({ yaml: true }))
 
     const start = async () => {
         try {
-            console.log("📣 Starting server on port 3333\n")
-
             await server.listen({ port: 3333 })
         } catch (err) {
             server.log.error(err)

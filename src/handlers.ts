@@ -1,4 +1,4 @@
-import { FastifyReply, FastifyRequest, HookHandlerDoneFunction, RouteHandlerMethod } from "fastify";
+import { FastifyBaseLogger as Logger, FastifyReply, FastifyRequest, HookHandlerDoneFunction } from "fastify";
 import { Argument, Debate, PrismaClient, User } from '@prisma/client'
 import { Mixpanel } from "mixpanel";
 import path from 'path';
@@ -24,9 +24,8 @@ type NewUserRequest = FastifyRequest<{
     }
 }>
 
-export function newUserHandler(prisma: PrismaClient) {
+export function newUserHandler(prisma: PrismaClient, logger: Logger) {
     return (async (req: NewUserRequest, res: FastifyReply) => {
-
         try {
             const queryUser = prisma.user.findUnique({
                 where: {
@@ -35,6 +34,8 @@ export function newUserHandler(prisma: PrismaClient) {
             })
 
             if (queryUser != null) {
+                logger.error(`User ${req.body.username} already exists`)
+
                 res.code(409).send({
                     error: 'Conflict',
                     message: 'User already exists'
@@ -44,7 +45,7 @@ export function newUserHandler(prisma: PrismaClient) {
             }
 
         } catch (e) {
-            console.log("Error querying user: ", e)
+            logger.error(`Error querying user: ${e}`)
 
             res.code(500).send({
                 error: 'Internal server error',
@@ -73,7 +74,7 @@ export function newUserHandler(prisma: PrismaClient) {
 
             return
         } catch (e) {
-            console.log("Error creating user: ", e)
+            logger.error(`Error creating user: ${e}`)
 
             res.code(500).send({
                 error: 'Internal server error',
@@ -91,7 +92,7 @@ type GetUserRequest = FastifyRequest<{
     }
 }>
 
-export function getUserHandler(prisma: PrismaClient) {
+export function getUserHandler(prisma: PrismaClient, logger: Logger) {
     return (async (req: GetUserRequest, res: FastifyReply) => {
         try {
             const user = await prisma.user.findUnique({
@@ -101,6 +102,8 @@ export function getUserHandler(prisma: PrismaClient) {
             })
 
             if (user == null) {
+                logger.error(`User ${req.params.username} not found`)
+
                 res.code(404).send('User not found')
 
                 return
@@ -115,7 +118,7 @@ export function getUserHandler(prisma: PrismaClient) {
             return
 
         } catch (e) {
-            console.log("Error querying user: ", e)
+            logger.error(`Error querying user: ${e}`)
 
             res.code(500).send({
                 error: 'Internal server error',
@@ -135,7 +138,7 @@ type NewPrivateDebateRequest = FastifyRequest<{
     }
 }>
 
-export function newPrivateDebateHandler(prisma: PrismaClient) {
+export function newPrivateDebateHandler(prisma: PrismaClient, logger: Logger) {
     return (async (req: NewPrivateDebateRequest, res: FastifyReply) => {
         try {
             const user = await prisma.user.findUnique({
@@ -145,6 +148,8 @@ export function newPrivateDebateHandler(prisma: PrismaClient) {
             })
 
             if (user == null) {
+                logger.error(`User ${req.body.authorUsername} not found`)
+
                 res.code(404).send({
                     error: 'Bad request',
                     message: 'User not found'
@@ -160,6 +165,8 @@ export function newPrivateDebateHandler(prisma: PrismaClient) {
             })
 
             if (opponent == null) {
+                logger.error(`Opponent ${req.body.opponent} not found`)
+
                 res.code(404).send({
                     error: 'Bad request',
                     message: 'Opponent not found'
@@ -198,7 +205,7 @@ export function newPrivateDebateHandler(prisma: PrismaClient) {
             return
 
         } catch {
-            console.log("Error creating debate")
+            logger.error(`Error creating debate`)
 
             res.code(500).send({
                 error: 'Internal server error',
@@ -216,7 +223,7 @@ type GetPrivateDebateRequest = FastifyRequest<{
     }
 }>
 
-export function getPrivateDebateHandler(prisma: PrismaClient) {
+export function getPrivateDebateHandler(prisma: PrismaClient, logger: Logger) {
     return (async (req: GetPrivateDebateRequest, res: FastifyReply) => {
         try {
             const debate = await prisma.debate.findUnique({
@@ -230,6 +237,8 @@ export function getPrivateDebateHandler(prisma: PrismaClient) {
             })
 
             if (debate == null) {
+                logger.error(`Debate ${req.params.id} not found`)
+
                 res.code(404).send({
                     error: 'Not found',
                     message: 'Debate not found'
@@ -247,7 +256,7 @@ export function getPrivateDebateHandler(prisma: PrismaClient) {
             return
 
         } catch (e) {
-            console.log("Error querying debate: ", e)
+            logger.error(`Error querying debate: ${e}`)
 
             res.code(500).send({
                 error: 'Internal server error',
@@ -271,7 +280,7 @@ type PostPrivateDebateArgumentRequest = FastifyRequest<{
     }
 }>
 
-export function postPrivateDebateArgumentHandler(prisma: PrismaClient) {
+export function postPrivateDebateArgumentHandler(prisma: PrismaClient, logger: Logger) {
     return (async (req: PostPrivateDebateArgumentRequest, res: FastifyReply) => {
         var debate: Debate & { arguments: Argument[]; participants: User[]; } | null;
 
@@ -287,7 +296,7 @@ export function postPrivateDebateArgumentHandler(prisma: PrismaClient) {
             })
 
             if (debate == null) {
-                console.log(`Debate ${req.params.id} not found`)
+                logger.error(`Debate ${req.params.id} not found`)
 
                 res.code(404).send({
                     error: 'Not found',
@@ -298,7 +307,7 @@ export function postPrivateDebateArgumentHandler(prisma: PrismaClient) {
             }
 
             if (debate.turnUsername != req.body.argument.authorUsername) {
-                console.log(`It is not ${req.body.argument.authorUsername}'s turn to post an argument`)
+                logger.error(`It is not ${req.body.argument.authorUsername}'s turn to post an argument`)
 
                 res.code(403).send({
                     error: 'Forbidden',
@@ -309,7 +318,7 @@ export function postPrivateDebateArgumentHandler(prisma: PrismaClient) {
             }
 
         } catch (e) {
-            console.log("Error querying debate: ", e)
+            logger.error(`Error querying debate: ${e}`)
 
             res.code(500).send({
                 error: 'Internal server error',
@@ -345,7 +354,7 @@ export function postPrivateDebateArgumentHandler(prisma: PrismaClient) {
                 });
 
             } catch (e) {
-                console.log("Error connecting argument to debate: ", e)
+                logger.error(`Error connecting argument to debate: ${e}`)
 
                 res.code(500).send({
                     error: 'Internal server error',
@@ -370,7 +379,7 @@ export function postPrivateDebateArgumentHandler(prisma: PrismaClient) {
                 });
 
             } catch (e) {
-                console.log("Error connecting argument to user: ", e)
+                logger.error(`Error connecting argument to user: ${e}`)
 
                 res.code(500).send({
                     error: 'Internal server error',
@@ -392,7 +401,7 @@ export function postPrivateDebateArgumentHandler(prisma: PrismaClient) {
                         }
                     });
                 } else {
-                    console.log("Error updating debate")
+                    logger.error(`Error updating debate ${req.params.id}`)
 
                     res.code(500).send({
                         error: 'Internal server error',
@@ -412,7 +421,7 @@ export function postPrivateDebateArgumentHandler(prisma: PrismaClient) {
                 return
 
             } catch (e) {
-                console.log("Error creating argument: ", e)
+                logger.error(`Error creating argument: ${e}`)
 
                 res.code(500).send({
                     error: 'Internal server error',
@@ -423,7 +432,7 @@ export function postPrivateDebateArgumentHandler(prisma: PrismaClient) {
             }
 
         } catch (e) {
-            console.log("Error creating argument: ", e)
+            logger.error(`Error creating argument: ${e}`)
 
             res.code(500).send({
                 error: 'Internal server error',
@@ -443,7 +452,7 @@ type NewPublicDebateRequest = FastifyRequest<{
     }
 }>
 
-export function newPublicDebateHandler(prisma: PrismaClient) {
+export function newPublicDebateHandler(prisma: PrismaClient, logger: Logger) {
     return (async (req: NewPublicDebateRequest, res: FastifyReply) => {
         try {
             const debate = await prisma.debate.create({
@@ -477,7 +486,7 @@ export function newPublicDebateHandler(prisma: PrismaClient) {
                 });
 
             } catch (e) {
-                console.log("Error connecting debate to user: ", e)
+                logger.error(`Error connecting debate to user: ${e}`)
 
                 res.code(500).send({
                     error: 'Internal server error',
@@ -496,7 +505,7 @@ export function newPublicDebateHandler(prisma: PrismaClient) {
             return
 
         } catch (e) {
-            console.log("Error creating debate: ", e)
+            logger.error(`Error creating debate: ${e}`)
 
             res.code(500).send({
                 error: 'Internal server error',
@@ -514,7 +523,7 @@ type GetPublicDebateRequest = FastifyRequest<{
     }
 }>
 
-export function getPublicDebateHandler(prisma: PrismaClient) {
+export function getPublicDebateHandler(prisma: PrismaClient, logger: Logger) {
     return (async (req: GetPublicDebateRequest, res: FastifyReply) => {
         try {
             const debate = await prisma.debate.findUnique({
@@ -528,7 +537,7 @@ export function getPublicDebateHandler(prisma: PrismaClient) {
             });
 
             if (!debate) {
-                console.log('Debate ${req.params.id} not found')
+                logger.error(`Debate ${req.params.id} not found`)
 
                 res.code(404).send({
                     error: 'Bad request',
@@ -547,7 +556,7 @@ export function getPublicDebateHandler(prisma: PrismaClient) {
             return
 
         } catch (e) {
-            console.log("Error creating debate: ", e)
+            logger.error(`Error creating debate: ${e}`)
 
             res.code(500).send({
                 error: 'Internal server error',
@@ -571,7 +580,7 @@ type PostPublicDebateArgumentRequest = FastifyRequest<{
     }
 }>
 
-export function postPublicDebateArgumentHandler(prisma: PrismaClient) {
+export function postPublicDebateArgumentHandler(prisma: PrismaClient, logger: Logger) {
     return (async (req: PostPublicDebateArgumentRequest, res: FastifyReply) => {
         try {
             const argument = await prisma.argument.create({
@@ -599,7 +608,7 @@ export function postPublicDebateArgumentHandler(prisma: PrismaClient) {
                 });
 
             } catch (e) {
-                console.log("Error connecting argument to debate: ", e)
+                logger.error(`Error connecting argument to debate: ${e}`)
 
                 res.code(500).send({
                     error: 'Internal server error',
@@ -624,7 +633,7 @@ export function postPublicDebateArgumentHandler(prisma: PrismaClient) {
                 });
 
             } catch (e) {
-                console.log("Error connecting argument to user: ", e)
+                logger.error(`Error connecting argument to user: ${e}`)
 
                 res.code(500).send({
                     error: 'Internal server error',
@@ -643,7 +652,7 @@ export function postPublicDebateArgumentHandler(prisma: PrismaClient) {
             return
 
         } catch (e) {
-            console.log("Error creating debate: ", e)
+            logger.error(`Error creating debate: ${e}`)
 
             res.code(500).send({
                 error: 'Internal server error',
@@ -661,8 +670,8 @@ export function aiPluginHandler() {
             "schema_version": "v1",
             "name_for_human": "Debate Game",
             "name_for_model": "Debate Game with Judge",
-            "description_for_human": "Need to debate with a friend about something? Want to test your debate skills against the public? Debate with anyone about anything with this plugin!",
-            "description_for_model": "This plugin enables two different forms of debate. The first being, two users can engage in a debate in which you are the judge, users choose the topic, and are each given two chances to make their case. After each user has made their case, you can decide who made the better argument. The user with the most points at the end of the debate wins. The second form enables a public debate with a leaderboard, where anyone can post an argument to a debate with a predetermined topic. When judging the arguments, make sure to consider relevance, clarity, evidence, and persuasiveness.",
+            "description_for_human": "Need to debate with a friend about something? Want to test your debate skills against the public? Debate with anyone about anything with Debate Game!",
+            "description_for_model": "Enables two different forms of debate. The first being, two users can engage in a debate in which you are the judge, users choose the topic, and are each given two chances to make their case. After each user has made their case, you can decide who made the better argument. The user with the most points at the end of the debate wins. The second form enables a public debate with a leaderboard, where anyone can post an argument to a debate with a predetermined topic. When judging the arguments, make sure to consider relevance, clarity, evidence, and persuasiveness.",
             "auth": {
                 "type": "none"
             },
@@ -671,7 +680,7 @@ export function aiPluginHandler() {
                 "url": "http://localhost:3333/openapi.yaml"
             },
             "logo_url": "http://localhost:3333/logo.png",
-            "contact_email": "jabari@pulp.chat",
+            "contact_email": "support@example.com",
             "legal_info_url": "http://localhost:3333/legal"
         })
 
@@ -679,14 +688,17 @@ export function aiPluginHandler() {
     })
 }
 
-export function logoHandler() {
+export function logoHandler(logger: Logger) {
     return (async (request: FastifyRequest, reply: FastifyReply) => {
         const imagePath = path.join(__dirname, '../assets/debaters-2.jpg');
-        fs.readFile(imagePath, (err, data) => {
-            if (err) {
+
+        fs.readFile(imagePath, (e, data) => {
+            if (e) {
+                logger.error(`Error reading image: ${e}`)
+
                 reply.code(500).send({
                     error: "Internal server error",
-                    message: err
+                    message: e
                 });
 
                 return
@@ -696,6 +708,40 @@ export function logoHandler() {
                 return
             }
         });
+    })
+}
+
+export function legalHandler() {
+    return (async (request: FastifyRequest, reply: FastifyReply) => {
+        reply.code(200).send(`Introduction
+        This legal disclaimer applies to the usage of the "The Debate Game Plugin" (hereinafter referred to as the "Plugin") hosted on XXXXX By using the Plugin, you accept and agree to be bound by the terms and conditions set forth in this legal disclaimer.
+        
+        Purpose
+        The Plugin is designed to provide relevant news information based on user input. It is intended for general informational purposes only and should not be considered as a substitute for personal research, preferences, or professional advice.
+        
+        Accuracy and Completeness
+        While we strive to provide accurate, up-to-date, and complete information, we make no warranties or representations regarding the accuracy, completeness, or reliability of the information provided by the Plugin. Users are encouraged to verify the information with the respective establishments before making any decisions based on the recommendations provided by the Plugin.
+        
+        Limitation of Liability
+        To the fullest extent permitted by law, we shall not be liable for any direct, indirect, incidental, special, consequential, or exemplary damages, including but not limited to damages for loss of profits, goodwill, use, data, or other intangible losses resulting from the use of or inability to use the Plugin, even if we have been advised of the possibility of such damages.
+        
+        Third-Party Content and Links
+        The Plugin may provide links to third-party websites or resources. We are not responsible for the content or availability of such websites or resources and do not endorse or assume any responsibility for any content, products, or services available on or through such websites or resources. Users acknowledge and agree that we shall not be responsible or liable, directly or indirectly, for any damage or loss caused or alleged to be caused by or in connection with the use of or reliance on any such content, products, or services available on or through any such website or resource.
+        
+        Copyright
+        All content provided by the Plugin, including but not limited to text, graphics, images, and logos, is the property of the Plugin's owner or its content providers and is protected by international copyright laws. Unauthorized use, reproduction, or distribution of this content is strictly prohibited.
+        
+        Changes to the Legal Disclaimer
+        We reserve the right to modify this legal disclaimer at any time without prior notice. Users are responsible for regularly reviewing this legal disclaimer to stay informed about any changes. Continued use of the Plugin after any modifications to this legal disclaimer constitutes acceptance of the revised terms and conditions.
+        
+        Governing Law
+        This legal disclaimer shall be governed by and construed in accordance with the laws of the jurisdiction in which the Plugin's owner is located. Users agree to submit to the exclusive jurisdiction of the courts of that jurisdiction for the resolution of any disputes arising from or in connection with this legal disclaimer or the use of the Plugin.
+        
+        Contact Information
+        For any questions, concerns, or comments regarding this legal disclaimer, please contact us at jabari@pulp.chat.`);
+
+        return
+
     })
 }
 
