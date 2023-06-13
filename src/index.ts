@@ -645,38 +645,37 @@ async function main() {
         }
     }, postPublicDebateArgumentHandler(prisma, server.log))
 
-    server.post('/.well-known/ai-plugin.json', {
+    server.get('/.well-known/ai-plugin.json', {
         schema: {
             description: 'Route for the requires ai-plugin.json file for the AI plugin.',
             tags: ['debates'],
             summary: 'qwerty',
-            params: {
-                type: 'object',
-                properties: {
-                    id: {
-                        type: 'string',
-                        description: 'debate id',
-                    }
-                }
-            },
-            body: {
-                type: 'object',
-                properties: {
-                    argument: {
-                        type: 'object',
-                        properties: {
-                            content: { type: 'string' },
-                            authorUsername: { type: 'string' },
-                        }
-                    },
-                }
-            },
             response: {
-                201: {
+                200: {
                     description: 'Successful response',
                     type: 'object',
                     properties: {
-                        data: { $ref: 'argument#' }
+                        schema_version: { type: 'string' },
+                        name_for_human: { type: 'string' },
+                        name_for_model: { type: 'string' },
+                        description_for_human: { type: 'string' },
+                        description_for_model: { type: 'string' },
+                        auth: {
+                            type: 'object',
+                            properties: {
+                                type: { type: 'string' },
+                            }
+                        },
+                        api: {
+                            type: 'string',
+                            properties: {
+                                type: { type: 'string' },
+                                url: { type: 'string' },
+                            }
+                        },
+                        logo_url: { type: 'string' },
+                        contact_email: { type: 'string' },
+                        legal_info_url: { type: 'string' }
                     }
                 },
                 default: {
@@ -696,39 +695,16 @@ async function main() {
         }
     }, aiPluginHandler())
 
-    server.post('/logo.png', {
+    server.get('/logo.png', {
         schema: {
             description: 'Route for posting a new argument to a public debate. The debate is public, so anyone can join. and post an argument',
             tags: ['debates'],
             summary: 'qwerty',
-            params: {
-                type: 'object',
-                properties: {
-                    id: {
-                        type: 'string',
-                        description: 'debate id',
-                    }
-                }
-            },
-            body: {
-                type: 'object',
-                properties: {
-                    argument: {
-                        type: 'object',
-                        properties: {
-                            content: { type: 'string' },
-                            authorUsername: { type: 'string' },
-                        }
-                    },
-                }
-            },
             response: {
-                201: {
+                200: {
                     description: 'Successful response',
-                    type: 'object',
-                    properties: {
-                        data: { $ref: 'argument#' }
-                    }
+                    type: 'string',
+                    format: 'binary' // use 'base64' if you're sending a base64 encoded image
                 },
                 default: {
                     description: 'Default response',
@@ -747,39 +723,15 @@ async function main() {
         }
     }, logoHandler(server.log))
 
-    server.post('/legal', {
+    server.get('/legal', {
         schema: {
             description: 'Route for posting a new argument to a public debate. The debate is public, so anyone can join. and post an argument',
             tags: ['debates'],
             summary: 'qwerty',
-            params: {
-                type: 'object',
-                properties: {
-                    id: {
-                        type: 'string',
-                        description: 'debate id',
-                    }
-                }
-            },
-            body: {
-                type: 'object',
-                properties: {
-                    argument: {
-                        type: 'object',
-                        properties: {
-                            content: { type: 'string' },
-                            authorUsername: { type: 'string' },
-                        }
-                    },
-                }
-            },
             response: {
-                201: {
+                200: {
                     description: 'Successful response',
-                    type: 'object',
-                    properties: {
-                        data: { $ref: 'argument#' }
-                    }
+                    type: 'string',
                 },
                 default: {
                     description: 'Default response',

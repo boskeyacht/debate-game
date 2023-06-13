@@ -27,7 +27,7 @@ type NewUserRequest = FastifyRequest<{
 export function newUserHandler(prisma: PrismaClient, logger: Logger) {
     return (async (req: NewUserRequest, res: FastifyReply) => {
         try {
-            const queryUser = prisma.user.findUnique({
+            const queryUser = await prisma.user.findUnique({
                 where: {
                     username: req.body.username
                 }
@@ -56,7 +56,7 @@ export function newUserHandler(prisma: PrismaClient, logger: Logger) {
         }
 
         try {
-            const user = prisma.user.create({
+            const user = await prisma.user.create({
                 data: {
                     username: req.body.username,
                     createdAt: new Date().toISOString(),
@@ -667,21 +667,21 @@ export function postPublicDebateArgumentHandler(prisma: PrismaClient, logger: Lo
 export function aiPluginHandler() {
     return (async (req: FastifyRequest, res: FastifyReply) => {
         res.code(200).send({
-            "schema_version": "v1",
-            "name_for_human": "Debate Game",
-            "name_for_model": "Debate Game with Judge",
-            "description_for_human": "Need to debate with a friend about something? Want to test your debate skills against the public? Debate with anyone about anything with Debate Game!",
-            "description_for_model": "Enables two different forms of debate. The first being, two users can engage in a debate in which you are the judge, users choose the topic, and are each given two chances to make their case. After each user has made their case, you can decide who made the better argument. The user with the most points at the end of the debate wins. The second form enables a public debate with a leaderboard, where anyone can post an argument to a debate with a predetermined topic. When judging the arguments, make sure to consider relevance, clarity, evidence, and persuasiveness.",
-            "auth": {
-                "type": "none"
+            schema_version: "v1",
+            name_for_human: "Debate Game",
+            name_for_model: "Debate Game with Judge",
+            description_for_human: "Need to debate with a friend about something? Want to test your debate skills against the public? Debate with anyone about anything with Debate Game!",
+            description_for_model: "Enables two different forms of debate. The first being, two users can engage in a debate in which you are the judge, users choose the topic, and are each given two chances to make their case. After each user has made their case, you can decide who made the better argument. The user with the most points at the end of the debate wins. The second form enables a public debate with a leaderboard, where anyone can post an argument to a debate with a predetermined topic. When judging the arguments, make sure to consider relevance, clarity, evidence, and persuasiveness.",
+            auth: {
+                type: "none"
             },
-            "api": {
-                "type": "openapi",
-                "url": "http://localhost:3333/openapi.yaml"
+            api: {
+                type: "openapi",
+                url: "http://localhost:3333/openapi.yaml"
             },
-            "logo_url": "http://localhost:3333/logo.png",
-            "contact_email": "support@example.com",
-            "legal_info_url": "http://localhost:3333/legal"
+            logo_url: "http://localhost:3333/logo.png",
+            contact_email: "support@example.com",
+            legal_info_url: "http://localhost:3333/legal"
         })
 
         return
@@ -690,7 +690,7 @@ export function aiPluginHandler() {
 
 export function logoHandler(logger: Logger) {
     return (async (request: FastifyRequest, reply: FastifyReply) => {
-        const imagePath = path.join(__dirname, '../assets/debaters-2.jpg');
+        const imagePath = path.join(__dirname, '../../assets/debaters-2.png');
 
         fs.readFile(imagePath, (e, data) => {
             if (e) {
