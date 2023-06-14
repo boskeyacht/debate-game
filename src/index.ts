@@ -5,6 +5,7 @@ import swagger from '@fastify/swagger';
 import { PrismaClient } from '@prisma/client';
 import Mixpanel from 'mixpanel';
 import dotenv from 'dotenv';
+import { Configuration, OpenAIApi } from 'openai';
 import {
     newUserHandler,
     getUserHandler,
@@ -18,7 +19,7 @@ import {
     logoHandler,
     aiPluginHandler,
     legalHandler,
-} from './handlers.js'
+} from './handlers.js';
 
 dotenv.config()
 
@@ -208,6 +209,12 @@ async function main() {
             },
         }
     })
+
+    const configuration = new Configuration({
+        apiKey: process.env.OPENAI_API_KEY,
+    });
+
+    const openai = new OpenAIApi(configuration);
 
     server.post('/users', {
         schema: {
@@ -515,7 +522,7 @@ async function main() {
                 }
             ]
         }
-    }, postPrivateDebateArgumentHandler(prisma, server.log))
+    }, postPrivateDebateArgumentHandler(prisma, server.log, openai))
 
     server.post('/debates/public', {
         schema: {
@@ -643,7 +650,7 @@ async function main() {
                 }
             ]
         }
-    }, postPublicDebateArgumentHandler(prisma, server.log))
+    }, postPublicDebateArgumentHandler(prisma, server.log, openai))
 
     server.get('/.well-known/ai-plugin.json', {
         schema: {

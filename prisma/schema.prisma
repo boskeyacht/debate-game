@@ -13,6 +13,7 @@ datasource db {
 model Argument {
   id             Int      @id @default(autoincrement())
   content        String
+  score          Int
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
   author         User     @relation(fields: [authorUsername], references: [username])
