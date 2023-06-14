@@ -25,6 +25,7 @@
     "fastify": "^4.17.0",
     "fastify-static": "^4.7.0",
     "mixpanel": "^0.17.0",
+    "openai": "^3.3.0",
     "typescript": "^5.0.4",
     "uuid": "^9.0.0"
   },

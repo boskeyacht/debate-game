@@ -1,9 +1,11 @@
 import { FastifyBaseLogger as Logger, FastifyReply, FastifyRequest, HookHandlerDoneFunction } from "fastify";
+import { OpenAIApi } from 'openai';
 import { Argument, Debate, PrismaClient, User } from '@prisma/client'
 import { Mixpanel } from "mixpanel";
 import path from 'path';
 import fs from 'fs';
 import { v4 as uuidv4 } from 'uuid';
+import { ScoreArgumentContext, ScoreArgumentNoContext, ScoreResponse } from './prompts.js';
 
 export async function mixpanelLogger(mixpanel: Mixpanel) {
     return (async (req: FastifyRequest, res: FastifyReply, done: HookHandlerDoneFunction) => {
@@ -280,7 +282,7 @@ type PostPrivateDebateArgumentRequest = FastifyRequest<{
     }
 }>
 
-export function postPrivateDebateArgumentHandler(prisma: PrismaClient, logger: Logger) {
+export function postPrivateDebateArgumentHandler(prisma: PrismaClient, logger: Logger, openai: OpenAIApi) {
     return (async (req: PostPrivateDebateArgumentRequest, res: FastifyReply) => {
         var debate: Debate & { arguments: Argument[]; participants: User[]; } | null;
 
@@ -329,6 +331,21 @@ export function postPrivateDebateArgumentHandler(prisma: PrismaClient, logger: L
         }
 
         try {
+            var argScore: number;
+
+            try {
+                argScore = await scoreArgument(logger, openai, { content: req.body.argument.content, authorUsername: req.body.argument.authorUsername }, null)
+            } catch (e) {
+                logger.error(`Error scoring argument: ${e}`)
+
+                res.code(500).send({
+                    error: 'Internal server error',
+                    message: 'Error scoring argument'
+                })
+
+                return
+            }
+
             const argument = await prisma.argument.create({
                 data: {
                     content: req.body.argument.content,
@@ -336,6 +353,7 @@ export function postPrivateDebateArgumentHandler(prisma: PrismaClient, logger: L
                     updatedAt: new Date().toISOString(),
                     authorUsername: req.body.argument.authorUsername,
                     debateId: parseInt(req.params.id),
+                    score: argScore,
                 }
             });
 
@@ -580,9 +598,24 @@ type PostPublicDebateArgumentRequest = FastifyRequest<{
     }
 }>
 
-export function postPublicDebateArgumentHandler(prisma: PrismaClient, logger: Logger) {
+export function postPublicDebateArgumentHandler(prisma: PrismaClient, logger: Logger, openai: OpenAIApi) {
     return (async (req: PostPublicDebateArgumentRequest, res: FastifyReply) => {
         try {
+            var argScore: number;
+
+            try {
+                argScore = await scoreArgument(logger, openai, { content: req.body.argument.content, authorUsername: req.body.argument.authorUsername }, null)
+            } catch (e) {
+                logger.error(`Error scoring argument: ${e}`)
+
+                res.code(500).send({
+                    error: 'Internal server error',
+                    message: 'Error scoring argument'
+                })
+
+                return
+            }
+
             const argument = await prisma.argument.create({
                 data: {
                     content: req.body.argument.content,
@@ -590,6 +623,7 @@ export function postPublicDebateArgumentHandler(prisma: PrismaClient, logger: Lo
                     updatedAt: new Date().toISOString(),
                     authorUsername: req.body.argument.authorUsername,
                     debateId: parseInt(req.params.id),
+                    score: argScore,
                 }
             });
 
@@ -743,6 +777,68 @@ export function legalHandler() {
         return
 
     })
+}
+
+async function scoreArgument(logger: Logger, openai: OpenAIApi, currentArgument: { content: string, authorUsername: string }, previousArgument: { content: string, authorUsername: string } | null): Promise<number> {
+    var score = 0;
+
+    if (previousArgument === null) {
+        try {
+            const noContextPrompt = new ScoreArgumentNoContext()
+
+            noContextPrompt.fillAttributes([{
+                original: "{{argument}}",
+                replacement: currentArgument.content
+            }])
+
+            const chatCompletion = await openai.createChatCompletion({
+                model: "gpt-4",
+                messages: [{ role: "user", content: noContextPrompt.message }],
+            });
+
+            console.log(chatCompletion.data.choices[0].message?.content)
+
+            const s: ScoreResponse = JSON.parse(chatCompletion.data.choices[0].message?.content as string);
+
+            score = s.score
+
+        } catch (e) {
+            logger.error(`Error scoring argument: ${e}`)
+
+            throw e
+        }
+
+    } else {
+        try {
+            const contextPrompt = new ScoreArgumentContext()
+
+            contextPrompt.fillAttributes([{
+                original: "{{argument}}",
+                replacement: currentArgument.content
+            },
+            {
+                original: "{{previous_argument}}",
+                replacement: previousArgument.content
+            }])
+
+            const chatCompletion = await openai.createChatCompletion({
+                model: "gpt-4",
+                messages: [{ role: "user", content: contextPrompt.message }],
+            });
+
+            console.log(chatCompletion.data.choices[0].message?.content)
+
+            const s: ScoreResponse = JSON.parse(chatCompletion.data.choices[0].message?.content as string);
+
+            score = s.score
+        } catch (e) {
+            logger.error(`Error scoring argument: ${e}`)
+
+            throw e
+        }
+    }
+
+    return score
 }
 
 // type SearchDebateRequest = FastifyRequest<{
